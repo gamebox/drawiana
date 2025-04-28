@@ -2,11 +2,10 @@ local Rectangle = require("tools").Rectangle
 local Line = require("tools").Line
 local Text = require("tools").Text
 local Circle = require("tools").Circle
-local dump = require("utils").dump
 
 local M = {}
 
----@alias Color { r : number, g : number, b : number }
+---@alias Color { r : number, g : number, b : number, a? : number }
 ---@alias Orientation 0 | 1
 
 ---@type Orientation
@@ -143,6 +142,9 @@ function Controls:new(x, y, h, w)
 		t.start = { x = xoffset + border + 12, y = c.y + border }
 	end
 
+	r:set_dimensions()
+	r2:set_dimensions()
+
 	setmetatable(c, self)
 	self.__index = self
 
@@ -239,8 +241,7 @@ function Controls:draw()
 	love.graphics.rectangle("fill", self.x, self.y, self.w, self.color_opt_height)
 	if self.orientation == HORIZONTAL then
 		for i, opt in pairs(color_options) do
-			love.graphics.setColor(opt.r, opt.g, opt.b, 1)
-			-- print("fill " .. (i - 1) * 10 .. " " .. window_h - controls_height .. " " .. 10 .. " " .. controls_height)
+			love.graphics.setColor(opt.r, opt.g, opt.b, opt.a or 1)
 			love.graphics.rectangle(
 				"fill",
 				(i - 1) * self.color_opt_width,
@@ -250,7 +251,7 @@ function Controls:draw()
 			)
 			if opt == self.current_color then
 				love.graphics.setLineWidth(4)
-				love.graphics.setColor(selected_color.r, selected_color.g, selected_color.b, 0.7)
+				love.graphics.setColor(selected_color.r, selected_color.g, selected_color.b, opt.a or 0.7)
 				love.graphics.rectangle(
 					"line",
 					(i - 1) * self.color_opt_width + 2,
@@ -262,8 +263,7 @@ function Controls:draw()
 		end
 	else
 		for i, opt in pairs(color_options) do
-			love.graphics.setColor(opt.r, opt.g, opt.b, 1)
-			-- print("fill " .. (i - 1) * 10 .. " " .. window_h - controls_height .. " " .. 10 .. " " .. controls_height)
+			love.graphics.setColor(opt.r, opt.g, opt.b, opt.a or 1)
 			love.graphics.rectangle(
 				"fill",
 				self.x + self.color_opt_width,
@@ -273,7 +273,7 @@ function Controls:draw()
 			)
 			if opt == self.current_color then
 				love.graphics.setLineWidth(4)
-				love.graphics.setColor(selected_color.r, selected_color.g, selected_color.b, 0.7)
+				love.graphics.setColor(selected_color.r, selected_color.g, selected_color.b, selected_color.a or 0.7)
 				love.graphics.rectangle(
 					"line",
 					self.x + 2 + self.color_opt_width,
@@ -288,7 +288,7 @@ function Controls:draw()
 		t:draw()
 	end
 	-- TODO: Implement add color button
-	love.graphics.setColor(black.r, black.g, black.b, 1)
+	love.graphics.setColor(black.r, black.g, black.b, black.a or 1)
 	love.graphics.print("" .. self.current_line_width, self.w - 50, self.y + 2)
 end
 

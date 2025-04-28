@@ -20,7 +20,6 @@ end
 ---@return boolean, { stack : Tool[], palette : Color[] }|nil
 function FileFormat:deserialize(file)
 	local bytes = file:read("string")
-	print(bytes)
 	local reader = BlobReader(bytes, "<", #bytes)
 	local res = {}
 	local t = reader:table(res)

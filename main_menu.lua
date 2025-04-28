@@ -2,8 +2,6 @@ local View = require("view").View
 local Dialog = require("dialog").Dialog
 local Heading = require("designsystem.heading").Heading
 local Button = require("designsystem.button").Button
--- local Input = require("designsystem.input").Input
--- local file_format = require("file_format")
 local list = require("designsystem.list")
 
 local M = {}
@@ -54,13 +52,26 @@ function MainMenu:new(load_new)
 end
 
 function MainMenu:keypressed(combo)
-	if self.dialog ~= nil and self.dialog:keypressed(combo) then
-		if self.dialog.shouldclose then
+	if self.dialog ~= nil then
+		self.dialog:keypressed(combo)
+		if self.dialog ~= nil and self.dialog.shouldclose then
 			self.dialog = nil
 		end
 		return
 	end
-	if combo == "return" then
+	if combo == "down" then
+		if self.selected == #self.options then
+			self.selected = 1
+		else
+			self.selected = self.selected + 1
+		end
+	elseif combo == "up" then
+		if self.selected == 0 then
+			self.selected = #self.options
+		else
+			self.selected = self.selected - 1
+		end
+	elseif combo == "return" then
 		self:handleselected()
 	end
 end
@@ -124,7 +135,6 @@ end
 
 ---@return View
 function MainMenu:createdialogcontent(xoffset, yoffset, width, height)
-	local userdir = love.filesystem.getSaveDirectory()
 	---@type string[]
 	local diritems = love.filesystem.getDirectoryItems("")
 	local files = {}
@@ -134,7 +144,6 @@ function MainMenu:createdialogcontent(xoffset, yoffset, width, height)
 			table.insert(files, item)
 		end
 	end
-	print("userdir: " .. userdir .. " #files: " .. #files)
 
 	local padding = 8
 	local view = {}
@@ -150,6 +159,10 @@ function MainMenu:createdialogcontent(xoffset, yoffset, width, height)
 	view.list.w = width - (padding * 2)
 	view.list.x = xoffset + padding
 	view.list.y = yoffset + view.heading.h + (padding * 2)
+	if #files > 0 then
+		view.list.selected = 1
+		view.list.focused = true
+	end
 	view.button = Button:new("OK", function()
 		self.dialog = nil
 		self.load_new(self.selectedfile)
@@ -203,6 +216,18 @@ function MainMenu:createdialogcontent(xoffset, yoffset, width, height)
 		end
 	end
 	view.keypressed = function(zelf, combo)
+		if combo == "tab" then
+			if zelf.list.focused then
+				zelf.list.focused = false
+				zelf.button.focused = true
+			elseif zelf.button.focused then
+				zelf.button.focused = false
+				zelf.list.focused = true
+			else
+				zelf.list.focused = true
+			end
+			return true
+		end
 		if zelf.heading:keypressed(combo) then
 			return true
 		end

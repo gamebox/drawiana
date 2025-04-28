@@ -8,6 +8,7 @@ local M = {}
 ---@field onclick function
 ---@field hovered boolean
 ---@field pressed boolean
+---@field focused boolean
 ---@field constraints? { h?: number, w?: number }
 ---@field bgcolor { r:number, g: number, b: number, a: number }
 ---@field hovercolor { r:number, g: number, b: number, a: number }
@@ -27,6 +28,7 @@ function Button:new(text, onclick, fontsize, constraints)
 	if constraints ~= nil then
 		-- Do something
 	end
+	---@type Button
 	local button = {
 		text = to,
 		w = w + 8,
@@ -34,6 +36,7 @@ function Button:new(text, onclick, fontsize, constraints)
 		onclick = onclick,
 		hovered = false,
 		pressed = false,
+		focused = false,
 		bgcolor = { r = 0.33, g = 0.33, b = 0.33, a = 1 },
 		hovercolor = { r = 0.37, g = 0.37, b = 0.37, a = 1 },
 		textcolor = { r = 1, g = 1, b = 1, a = 1 },
@@ -71,8 +74,14 @@ function Button:mousereleased(x, y)
 	end
 end
 
+function Button:keypressed(combo)
+	if self.focused and combo == "return" then
+		self.onclick()
+	end
+end
+
 function Button:draw()
-	if self.hovered then
+	if self.hovered or self.focused then
 		love.graphics.setColor(self.hovercolor.r, self.hovercolor.g, self.hovercolor.b, self.hovercolor.a)
 	else
 		love.graphics.setColor(self.bgcolor.r, self.bgcolor.g, self.bgcolor.b, self.bgcolor.a)

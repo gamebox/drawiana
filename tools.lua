@@ -16,17 +16,26 @@ local toolnames = {
 ---@field color Color
 ---@field width number
 ---@field building boolean
+---@field selected boolean
+---@field x number
+---@field y number
+---@field h number
+---@field w number
 local Tool = {
-	color = { r = 0, g = 0, b = 0 },
+	toolname = toolnames.unknown,
+	color = { r = 0, g = 0, b = 0, a = 1 },
 	width = 0,
+	x = 0,
+	y = 0,
+	h = 0,
+	w = 0,
+	selected = false,
+	building = false,
 }
 
+---@return Tool
 function Tool:new()
-	local t = {
-		toolname = toolnames.unknown,
-		color = { r = 0, g = 0, b = 0 },
-		width = 0,
-	}
+	local t = {}
 	setmetatable(t, self)
 	self.__index = self
 	return t
@@ -79,6 +88,19 @@ function Tool:keypressed(combo)
 	return false
 end
 
+---@param dx number
+---@param dy number
+---@diagnostic disable-next-line unused-local
+function Tool:move(dx, dy) end
+
+function Tool:draw_selection_box()
+	if self.selected then
+		love.graphics.setColor(0.0, 0.0, 0.75, 0.3)
+		love.graphics.setLineWidth(1)
+		love.graphics.rectangle("line", self.x, self.y, self.w, self.h)
+	end
+end
+
 -- LINE
 
 ---@class Line: Tool
@@ -89,6 +111,7 @@ local Line = Tool:new()
 
 ---@param linewidth number
 ---@param color Color
+---@return Line
 function Line:new(linewidth, color)
 	---@type Line
 	local l = {
@@ -119,9 +142,29 @@ function Line:mousemoved(x, y)
 	return false
 end
 
+function Line:set_dimensions()
+	local startx, starty, endx, endy = 0, 0, 0, 0
+
+	for i, point in ipairs(self.points) do
+		if i % 2 == 0 then
+			starty = math.min(starty, point)
+			endy = math.max(endy, point)
+		else
+			startx = math.min(startx, point)
+			endx = math.max(endx, point)
+		end
+	end
+
+	self.x = startx
+	self.y = starty
+	self.w = endx - startx
+	self.h = endy - starty
+end
+
 function Line:mousereleased()
 	if self.building then
 		self.building = false
+		self:set_dimensions()
 		return true
 	end
 	return false
@@ -135,9 +178,24 @@ function Line:draw()
 	if #self.points < 4 then
 		return
 	end
-	love.graphics.setColor(self.color.r, self.color.g, self.color.b, 1)
+	love.graphics.setColor(self.color.r, self.color.g, self.color.b, self.color.a or 1)
 	love.graphics.setLineWidth(self.width)
 	love.graphics.line(self.points)
+	self:draw_selection_box()
+end
+
+---@param dx number
+---@param dy number
+function Line:move(dx, dy)
+	for i = 1, #self.points, 1 do
+		if i % 2 == 0 then
+			self.points[i] = self.points[i] + dy
+		else
+			self.points[i] = self.points[i] + dx
+		end
+	end
+	self.x = self.x + dx
+	self.y = self.y + dy
 end
 
 -- RECTANGLE
@@ -148,10 +206,12 @@ end
 ---@field color Color
 ---@field start { x : number, y : number }|nil
 ---@field end_ { x : number, y : number }|nil
+---@field moving boolean
 local Rectangle = Tool:new()
 
 ---@param linewidth number
 ---@param color Color
+---@return Rectangle
 function Rectangle:new(linewidth, color)
 	local l = {
 		toolname = toolnames.rectangle,
@@ -160,6 +220,7 @@ function Rectangle:new(linewidth, color)
 		color = color,
 		start = nil,
 		end_ = nil,
+		moving = false,
 	}
 
 	setmetatable(l, self)
@@ -185,19 +246,24 @@ function Rectangle:draw()
 	if self.start == nil or self.end_ == nil then
 		return
 	end
-	local opacity = 1
+	local opacity = self.color.a or 1
 	if self.building then
 		opacity = 0.3
 	end
 	love.graphics.setColor(self.color.r, self.color.g, self.color.b, opacity)
 	love.graphics.setLineWidth(self.width)
 
-	local x1, y1, x2, y2 =
-		math.min(self.start.x, self.end_.x),
-		math.min(self.start.y, self.end_.y),
-		math.max(self.start.x, self.end_.x),
-		math.max(self.start.y, self.end_.y)
-	love.graphics.rectangle(self.mode, x1, y1, x2 - x1, y2 - y1)
+	if self.building then
+		local x1, y1, x2, y2 =
+			math.min(self.start.x, self.end_.x),
+			math.min(self.start.y, self.end_.y),
+			math.max(self.start.x, self.end_.x),
+			math.max(self.start.y, self.end_.y)
+		love.graphics.rectangle(self.mode, x1, y1, x2 - x1, y2 - y1)
+	else
+		love.graphics.rectangle(self.mode, self.x, self.y, self.w, self.h)
+	end
+	self:draw_selection_box()
 end
 
 function Rectangle:mousepressed(x, y)
@@ -214,12 +280,41 @@ function Rectangle:mousemoved(x, y)
 	return false
 end
 
+function Rectangle:set_dimensions()
+	local x1, y1, x2, y2 =
+		math.min(self.start.x, self.end_.x),
+		math.min(self.start.y, self.end_.y),
+		math.max(self.start.x, self.end_.x),
+		math.max(self.start.y, self.end_.y)
+	self.x = x1
+	self.y = y1
+	self.w = x2 - x1
+	self.h = y2 - y1
+end
+
 function Rectangle:mousereleased()
 	if self.building then
 		self.building = false
+		self:set_dimensions()
 		return true
 	end
 	return false
+end
+
+function Rectangle:keypressed(combo)
+	if self.building and combo == "Ctrl+=" then
+		self.equal_sides = not self.equal_sides
+		return true
+	end
+	return false
+end
+
+---@param dx number
+---@param dy number
+function Rectangle:move(dx, dy)
+	print("moving (" .. dx .. ", " .. dy .. ")")
+	self.x = self.x + dx
+	self.y = self.y + dy
 end
 
 -- TEXT
@@ -236,6 +331,7 @@ local Text = Tool:new()
 
 ---@param linewidth number
 ---@param color Color
+---@return Text
 function Text:new(linewidth, color)
 	---@type Text
 	local l = {
@@ -280,7 +376,7 @@ function Text:draw()
 		local textw, texth = text_drawable:getDimensions()
 		love.graphics.rectangle("line", self.start.x - 10, self.start.y - 10, textw + 20, texth + 20)
 	end
-	local opacity = 1
+	local opacity = self.color.a or 1
 	love.graphics.setColor(self.color.r, self.color.g, self.color.b, opacity)
 	love.graphics.setLineWidth(self.width)
 
@@ -331,10 +427,12 @@ end
 ---@field origin { x : number, y : number }|nil
 ---@field radiusx number
 ---@field radiusy number
+---@field equal_sides boolean
 local Circle = Tool:new()
 
 ---@param linewidth number
 ---@param color Color
+---@return Circle
 function Circle:new(linewidth, color)
 	---@type Circle
 	local l = {
@@ -345,6 +443,7 @@ function Circle:new(linewidth, color)
 		origin = nil,
 		radiusx = 0,
 		radiusy = 0,
+		equal_sides = false,
 	}
 
 	setmetatable(l, self)
@@ -356,7 +455,7 @@ function Circle:draw()
 	if self.origin == nil or self.radiusy == 0 or self.radiusx == 0 then
 		return
 	end
-	local opacity = 1
+	local opacity = self.color.a or 1
 	if self.building then
 		opacity = 0.3
 	end
@@ -389,6 +488,14 @@ function Circle:mousereleased()
 	return false
 end
 
+function Circle:keypressed(combo)
+	if self.building and combo == "Ctrl+=" then
+		self.equal_sides = not self.equal_sides
+		return true
+	end
+	return false
+end
+
 -- Deseralize tool
 
 local toolfactory = function(t)
@@ -399,10 +506,12 @@ local toolfactory = function(t)
 		local tool
 		if toolname == 1 then
 			tool = Rectangle:deserialize(t)
+			tool:set_dimensions()
 		elseif toolname == 2 then
 			tool = Circle:deserialize(t)
 		elseif toolname == 3 then
 			tool = Line:deserialize(t)
+			tool:set_dimensions()
 		elseif toolname == 4 then
 			tool = Text:deserialize(t)
 		else
@@ -419,5 +528,6 @@ M.Rectangle = Rectangle
 M.Text = Text
 M.Circle = Circle
 M.toolfactory = toolfactory
+M.toolnames = toolnames
 
 return M

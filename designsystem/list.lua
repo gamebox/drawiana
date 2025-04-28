@@ -9,6 +9,7 @@ local themedefaults = {
 }
 
 local padding = 4
+local trackw = 8
 
 ---@package
 ---@alias RGBA { r:number, g: number, b: number, a: number }
@@ -17,7 +18,7 @@ local padding = 4
 ---@field options love.Text[]
 ---@field rawoptions string[]
 ---@field fontsize? number
----@field onselected fun(value: string)
+---@field onselected fun(value: string, index: number)
 ---@field itemh number
 ---@field constraints? { h?: number, w?: number }
 ---@field bgcolor RGBA
@@ -25,13 +26,18 @@ local padding = 4
 ---@field textcolor RGBA
 ---@field selected number
 ---@field focused boolean
+---@field needs_scroll boolean
+---@field scroll_height number
+---@field scroll_y number
+---@field canvas love.Canvas
 local List = View:new()
 
 ---@param options string[]
----@param onselected fun(value: string)
----@param themeopts? { bgcolor? : RGBA, hovercolor? : RGBA, textcolor? : RGBA }
+---@param onselected fun(value: string, index: number)
+---@param themeopts? { bgcolor? : RGBA, hovercolor? : RGBA, textcolor? : RGBA }|nil
+---@param sizeopts? { x : number, y : number, w : number, h : number }|nil
 ---@return List
-function List:new(options, onselected, themeopts)
+function List:new(options, onselected, themeopts, sizeopts)
 	themeopts = themeopts or themedefaults
 	---@type love.Text[]
 	local opts = {}
@@ -44,6 +50,9 @@ function List:new(options, onselected, themeopts)
 		itemw = math.max(itemw, w)
 	end
 
+	local h = itemh * 3 + (padding * 2)
+	local w = itemw + (padding * 2)
+
 	---@type List
 	local list = {
 		options = opts,
@@ -53,11 +62,25 @@ function List:new(options, onselected, themeopts)
 		bgcolor = themeopts.bgcolor or themedefaults.bgcolor,
 		hovercolor = themeopts.hovercolor or themedefaults.hovercolor,
 		textcolor = themeopts.textcolor or themedefaults.textcolor,
-		h = itemh * 3 + (padding * 2),
-		w = itemw + (padding * 2),
 		selected = 0,
 		focused = false,
+		needs_scroll = false,
+		scroll_y = 0,
+		scroll_height = #options * (itemh + padding),
+		w = w,
+		h = h,
+		canvas = love.graphics.newCanvas(w, h),
 	}
+	if list.scroll_height > list.h then
+		list.needs_scroll = true
+	end
+
+	if sizeopts ~= nil then
+		list.h = sizeopts.h
+		list.w = sizeopts.w
+		list.x = sizeopts.x
+		list.y = sizeopts.y
+	end
 
 	setmetatable(list, self)
 	self.__index = self
@@ -66,14 +89,22 @@ function List:new(options, onselected, themeopts)
 end
 
 function List:keypressed(combo)
-	if combo == "down" and self.focused then
+	if combo == "down" and self.focused and #self.options > 0 then
 		self.selected = math.min(#self.options, self.selected + 1)
-		self.onselected(self.rawoptions[self.selected])
+		local selected_item_scroll_y = (self.itemh + padding) * self.selected
+		if (selected_item_scroll_y - self.scroll_y) > self.h then
+			self.scroll_y = self.scroll_y + self.h
+		end
+		self.onselected(self.rawoptions[self.selected], self.selected)
 		return true
 	end
-	if combo == "up" and self.focused then
-		self.selected = math.max(0, self.selected - 1)
-		self.onselected(self.rawoptions[self.selected])
+	if combo == "up" and self.focused and #self.options > 0 then
+		self.selected = math.max(1, self.selected - 1)
+		local selected_item_scroll_y = (self.itemh + padding) * self.selected
+		if (selected_item_scroll_y - self.scroll_y) <= 0 then
+			self.scroll_y = self.scroll_y - self.h
+		end
+		self.onselected(self.rawoptions[self.selected], self.selected)
 		return true
 	end
 	if combo == "esc" and self.focused then
@@ -86,27 +117,62 @@ end
 function List:mousepressed(x, y)
 	if self:inarea(x, y) then
 		self.focused = true
-		if #self.options > 0 then
+		if #self.options > 0 and self.selected == 0 then
 			self.selected = 1
-			self.onselected(self.rawoptions[self.selected])
+			self.onselected(self.rawoptions[self.selected], self.selected)
+		end
+		if x > (self.x + self.w - 8) then
+			print("on scrollbar")
 		end
 		return true
 	end
 	return false
 end
 
+---@param dt number
+---@diagnostic disable-next-line unused-local
+function List:update(dt)
+	if self.canvas:getHeight() ~= self.h or self.canvas:getWidth() ~= self.w then
+		print("w: " .. self.w .. " h: " .. self.h)
+		self.canvas = love.graphics.newCanvas(math.max(1, self.w), math.max(1, self.h))
+	end
+	self.canvas:renderTo(function()
+		love.graphics.clear(self.bgcolor.r, self.bgcolor.g, self.bgcolor.b, self.bgcolor.a or 1)
+		local posy = padding - self.scroll_y
+		for i, opt in pairs(self.options) do
+			if self.selected == i then
+				love.graphics.setColor(self.hovercolor.r, self.hovercolor.g, self.hovercolor.b, self.hovercolor.a)
+				love.graphics.rectangle("fill", 0, posy - padding, self.w, self.itemh + (padding * 2))
+			end
+			love.graphics.setColor(self.textcolor.r, self.textcolor.g, self.textcolor.b, self.textcolor.a)
+			love.graphics.draw(opt, padding, posy)
+			posy = posy + self.itemh + padding
+		end
+		if self.needs_scroll then
+			-- Scroll Track
+			local trackx = self.w - trackw
+			local thumbh = math.floor(self.h / self.scroll_height * 100) * self.h / 100
+			love.graphics.setColor(0.60, 0.60, 0.60, 1)
+			love.graphics.rectangle("fill", trackx, 0, trackw, self.h)
+
+			-- Scroll Thumb
+			love.graphics.setColor(0.40, 0.40, 0.40, 0.7)
+			local percent_scrolled = math.floor(self.scroll_y / self.scroll_height * 100)
+			local thumby = math.ceil(self.h * percent_scrolled / 100)
+			love.graphics.rectangle("fill", trackx + 1, thumby, trackw - 2, thumbh)
+		end
+	end)
+end
+
 function List:draw()
 	love.graphics.setColor(self.bgcolor.r, self.bgcolor.g, self.bgcolor.b, self.bgcolor.a)
 	love.graphics.rectangle("fill", self.x, self.y, self.w, self.h)
-	local posy = self.y + padding
-	for i, opt in pairs(self.options) do
-		if self.selected == i then
-			love.graphics.setColor(self.hovercolor.r, self.hovercolor.g, self.hovercolor.b, self.hovercolor.a)
-			love.graphics.rectangle("fill", self.x, posy - padding, self.w, self.itemh + (padding * 2))
-		end
-		love.graphics.setColor(self.textcolor.r, self.textcolor.g, self.textcolor.b, self.textcolor.a)
-		love.graphics.draw(opt, self.x + padding, posy)
-		posy = posy + self.itemh + padding
+	love.graphics.setColor(1, 1, 1, 1)
+	love.graphics.draw(self.canvas, self.x, self.y)
+	if self.focused then
+		love.graphics.setColor(0, 0, 0.75, 0.3)
+		love.graphics.setLineWidth(1)
+		love.graphics.rectangle("line", self.x, self.y, self.w, self.h)
 	end
 end
 

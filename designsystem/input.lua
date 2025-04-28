@@ -27,6 +27,9 @@ function Input:new(text, fontsize, constraints)
 	local to = love.graphics.newText(font, text)
 	local blinkto = love.graphics.newText(font, text .. "|")
 	local w, h = to:getDimensions()
+	if text == "" then
+		w, h = blinkto:getDimensions()
+	end
 	if constraints ~= nil then
 		-- Do something
 	end
@@ -34,8 +37,8 @@ function Input:new(text, fontsize, constraints)
 	local input = {
 		text = to,
 		font = font,
-		w = w,
-		h = h,
+		w = w + 4,
+		h = h + 4,
 		focused = false,
 		rawText = text,
 		blink_on = false,
@@ -93,7 +96,6 @@ function Input:keypressed(combo)
 		change = true
 	end
 	if change then
-		print('updated text to: "' .. self.rawText .. '" and updating text objects now')
 		self:updatetextobjects()
 		return true
 	end

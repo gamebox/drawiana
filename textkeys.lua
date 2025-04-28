@@ -13,7 +13,6 @@ end
 local ascii_key_from_combo = function(combo)
 	if string.match(combo, "^Shift+") then
 		combo = string.sub(combo, 7)
-		print(combo)
 		if #combo == 1 then
 			if textkeysmap[combo] ~= nil then
 				combo = textkeysmap[combo]
