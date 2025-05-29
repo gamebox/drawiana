@@ -4,3 +4,6 @@ run_tiled:
 
 dev:
     wgo -file .lua just run_tiled
+
+test:
+    /Applications/love.app/Contents/MacOS/love . --test

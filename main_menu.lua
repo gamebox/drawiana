@@ -52,6 +52,7 @@ function MainMenu:new(load_new)
 end
 
 function MainMenu:keypressed(combo)
+	print("MainMenu:keypressed combo=" .. combo)
 	if self.dialog ~= nil then
 		self.dialog:keypressed(combo)
 		if self.dialog ~= nil and self.dialog.shouldclose then

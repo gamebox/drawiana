@@ -434,7 +434,6 @@ local Circle = Tool:new()
 ---@param color Color
 ---@return Circle
 function Circle:new(linewidth, color)
-	---@type Circle
 	local l = {
 		toolname = toolnames.circle,
 		width = linewidth,
