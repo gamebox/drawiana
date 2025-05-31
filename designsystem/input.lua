@@ -1,5 +1,6 @@
 local View = require("view").View
 local ascii_key_from_combo = require("textkeys").ascii_key_from_combo
+local fonts = require("fonts")
 
 local M = {}
 
@@ -23,7 +24,7 @@ local Input = View:new()
 function Input:new(text, fontsize, constraints)
 	text = text or ""
 	fontsize = fontsize or 14
-	local font = love.graphics.newFont(fontsize)
+	local font = fonts.get_regular_font(fontsize)
 	local to = love.graphics.newText(font, text)
 	local blinkto = love.graphics.newText(font, text .. "|")
 	local w, h = to:getDimensions()

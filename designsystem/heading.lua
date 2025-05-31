@@ -1,4 +1,5 @@
 local View = require("view").View
+local fonts = require("fonts")
 
 local M = {}
 
@@ -14,7 +15,7 @@ local Heading = View:new()
 ---@return Heading
 function Heading:new(text, fontsize, constraints)
 	fontsize = fontsize or 14
-	local font = love.graphics.newFont(fontsize)
+	local font = fonts.get_regular_font(fontsize)
 	local to = love.graphics.newText(font, text)
 	local w, h = to:getDimensions()
 	if constraints ~= nil then

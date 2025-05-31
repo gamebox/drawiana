@@ -3,12 +3,15 @@ local Dialog = require("dialog").Dialog
 local Heading = require("designsystem.heading").Heading
 local Button = require("designsystem.button").Button
 local list = require("designsystem.list")
+local fonts = require("fonts")
 
 local M = {}
 
 local toppadding = 100
 local titlemargin = 50
 local optionmargin = 20
+local font = fonts.get_regular_font(48)
+local option_font = fonts.get_regular_font(32)
 
 ---@class MainMenu: View
 ---@field title love.Text
@@ -26,8 +29,6 @@ local MainMenu = View:new()
 ---@param load_new fun(name?: string|nil)
 function MainMenu:new(load_new)
 	local w, h, _ = love.window.getMode()
-	local font = love.graphics.newFont(48)
-	local option_font = love.graphics.newFont(32)
 	local mm = {
 		w = w,
 		h = h,

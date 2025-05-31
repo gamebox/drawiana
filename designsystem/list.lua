@@ -1,4 +1,5 @@
 local View = require("view").View
+local fonts = require("fonts")
 
 local M = {}
 
@@ -41,7 +42,7 @@ function List:new(options, onselected, themeopts, sizeopts)
 	themeopts = themeopts or themedefaults
 	---@type love.Text[]
 	local opts = {}
-	local font = love.graphics.newFont(14)
+	local font = fonts.get_regular_font(14)
 	local itemh, itemw = 0, 0
 	for i, opt in pairs(options) do
 		table.insert(opts, love.graphics.newText(font, opt))

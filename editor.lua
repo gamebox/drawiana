@@ -56,11 +56,7 @@ function Editor:new(name)
 			print("Could not read file: " .. (err or "No error specified"))
 		end
 	end
-	local _, _, flags = love.window.getMode()
 
-	-- The window's flags contain the index of the monitor it's currently in.
-	local width, height = love.window.getDesktopDimensions(flags.display)
-	love.window.setMode(math.floor(width * 0.75), math.floor(height * 0.75), { centered = false })
 	local w, h, _ = love.window.getMode()
 	local controls_height = 50
 	local controls = Controls:new(0, h - controls_height, controls_height, w)

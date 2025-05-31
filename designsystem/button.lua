@@ -1,4 +1,5 @@
 local View = require("view").View
+local fonts = require("fonts")
 
 local M = {}
 
@@ -22,8 +23,9 @@ local Button = View:new()
 ---@return Button
 function Button:new(text, onclick, fontsize, constraints)
 	fontsize = fontsize or 14
-	local font = love.graphics.newFont(fontsize)
+	local font = fonts.get_regular_font(fontsize)
 	local to = love.graphics.newText(font, text)
+
 	local w, h = to:getDimensions()
 	if constraints ~= nil then
 		-- Do something

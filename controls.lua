@@ -8,6 +8,7 @@ local View = require("view").View
 local Dialog = require("dialog").Dialog
 local Button = require("designsystem.button").Button
 local utils = require("utils")
+local fonts = require("fonts")
 
 local M = {}
 
@@ -181,7 +182,7 @@ function ColorDialog:keyreleased()
 	return false
 end
 
-local title_font = love.graphics.newFont(20)
+local title_font = fonts.get_bold_font(20)
 
 function ColorDialog:draw()
 	love.graphics.setColor(1, 1, 1, 1)

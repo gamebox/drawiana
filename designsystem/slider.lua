@@ -53,7 +53,6 @@ function Slider:new(x, y, w, h, opts)
 	slider.y = y
 	slider.w = w
 	slider.h = h
-	--slider.font = love.graphics.newFont(self.font_size)
 
 	--slider.value_text = love.graphics.newText(self.font, string.format("%i", self.value))
 	-- Return instance
