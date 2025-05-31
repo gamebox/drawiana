@@ -122,7 +122,19 @@ function List:mousepressed(x, y)
 			self.onselected(self.rawoptions[self.selected], self.selected)
 		end
 		if x > (self.x + self.w - 8) then
-			print("on scrollbar")
+		elseif #self.options > 0 then
+			local local_y = y - self.y
+			-- See if the click is within an option
+			local posy = 0
+			for i, _ in pairs(self.options) do
+				local next_posy = posy + self.itemh + padding
+				if local_y > posy and local_y <= next_posy then
+					self.selected = i
+					self.onselected(self.rawoptions[self.selected], self.selected)
+					break
+				end
+				posy = next_posy
+			end
 		end
 		return true
 	end
@@ -133,7 +145,6 @@ end
 ---@diagnostic disable-next-line unused-local
 function List:update(dt)
 	if self.canvas:getHeight() ~= self.h or self.canvas:getWidth() ~= self.w then
-		print("w: " .. self.w .. " h: " .. self.h)
 		self.canvas = love.graphics.newCanvas(math.max(1, self.w), math.max(1, self.h))
 	end
 	self.canvas:renderTo(function()

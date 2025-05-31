@@ -18,7 +18,7 @@ You should be able to make art, mockups, etc. quickly and easily with either you
 - Mouse support in most UI
 
 ## Roadmap
-- [ ] List component support mouse
+- [x] List component support mouse
 - [ ] Focus management in design system components
 - [ ] Layer property editing and viewing
 - [ ] Grid / snap to grid

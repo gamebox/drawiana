@@ -55,8 +55,16 @@ function MainMenu:keypressed(combo)
 	print("MainMenu:keypressed combo=" .. combo)
 	if self.dialog ~= nil then
 		self.dialog:keypressed(combo)
+		local openfile = false
+		if self.selectedfile ~= nil and combo == "return" then
+			self.dialog.shouldclose = true
+			openfile = true
+		end
 		if self.dialog ~= nil and self.dialog.shouldclose then
 			self.dialog = nil
+		end
+		if openfile then
+			self.load_new(self.selectedfile)
 		end
 		return
 	end

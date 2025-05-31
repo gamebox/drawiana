@@ -33,7 +33,8 @@ end
 ---@return Editor
 function Editor:new(name)
 	local stack = {}
-	if name ~= nil then
+	if name ~= nil and name ~= "" then
+		print("Opening " .. name)
 		local file, opened, ok, err, state
 		file, err = love.filesystem.newFile(name, "r")
 		opened, err = file:open("r")
