@@ -210,6 +210,7 @@ end
 ---@field tool_indexes { [string]: number }
 ---@field color_options Color[]
 ---@field color_dialog ColorDialog|nil
+---@field add_color_button Button
 local Controls = View:new({
 	current_color = white,
 	current_line_width = 1,
@@ -242,6 +243,11 @@ function Controls:new(x, y, h, w)
 	controls.tool_options = {}
 	controls.tool_indexes = {}
 	controls.color_dialog = nil
+	controls.add_color_button = Button:new("Add", function()
+		self:open_color_dialog()
+	end, 12)
+	local bgcolor = utils.with(black, "a", 1)
+	controls.add_color_button.bgcolor = bgcolor
 
 	for i, t in ipairs(Controls.tools) do
 		controls.tool_indexes[t] = i
@@ -329,18 +335,25 @@ function Controls:mousemoved(x, y)
 	if self.color_dialog ~= nil then
 		self.color_dialog:mousemoved(x, y)
 	end
+	self.add_color_button:mousemoved(x, y)
 end
 
 function Controls:mousereleased(x, y)
-	if self.color_dialog ~= nil and self.color_dialog:mousereleased(x, y) then
+	if
+		(self.color_dialog ~= nil and self.color_dialog:mousereleased(x, y))
+		or self.add_color_button:mousereleased(x, y)
+	then
 		return true
 	end
 end
 
 function Controls:mousepressed(x, y)
-	if self.color_dialog ~= nil and self.color_dialog:mousepressed(x, y) then
+	if
+		(self.color_dialog ~= nil and self.color_dialog:mousepressed(x, y)) or self.add_color_button:mousepressed(x, y)
+	then
 		return true
 	end
+
 	if self:inarea(x, y) then
 		local index = 1
 		while x > index * self.color_opt_width do
@@ -352,7 +365,7 @@ function Controls:mousepressed(x, y)
 			end
 			self.tool = self.tools[index]
 			for _, tool in pairs(self.tool_options) do
-				tool:setColor(color_options[#color_options])
+				tool:setColor(black)
 			end
 			self.tool_options[index]:setColor(selected_color)
 		else
@@ -370,7 +383,9 @@ end
 function Controls:keypressed(combo)
 	local idx = 0
 
-	if self.color_dialog ~= nil and self.color_dialog:keypressed(combo) then
+	if
+		(self.color_dialog ~= nil and self.color_dialog:keypressed(combo)) or self.add_color_button:keypressed(combo)
+	then
 		return true
 	end
 	if combo == "r" then
@@ -425,7 +440,7 @@ function Controls:keypressed(combo)
 	if idx > 0 then
 		self.tool = self.tools[idx]
 		for _, tool in pairs(self.tool_options) do
-			tool:setColor(color_options[#color_options])
+			tool:setColor(black)
 		end
 		self.tool_options[idx]:setColor(selected_color)
 		return true
@@ -444,21 +459,28 @@ function Controls:keypressed(combo)
 		return true
 	end
 	if combo == "Shift+=" and self.color_dialog == nil then
-		local zelf = self
-		self.color_dialog = Dialog:new("md", function(x, y, w, h)
-			return ColorDialog:new(x, y, w, h, function(color)
-				if color ~= nil then
-					print("SAVED", utils.dump(color))
-					table.insert(color_options, #color_options + 1, color)
-					self.color_options = color_options
-					print("INSERTED: ", utils.dump(color_options[#color_options]))
-				end
-				zelf.color_dialog = nil
-			end)
-		end)
+		self:open_color_dialog()
 		return true
 	end
 	return false
+end
+
+---@param color Color
+function Controls:on_color_dialog_closed(color)
+	if color ~= nil then
+		table.insert(color_options, #color_options + 1, color)
+		self.color_options = color_options
+	end
+	self.color_dialog = nil
+end
+
+function Controls:open_color_dialog()
+	local zelf = self
+	self.color_dialog = Dialog:new("md", function(x, y, w, h)
+		return ColorDialog:new(x, y, w, h, function(color)
+			zelf:on_color_dialog_closed(color)
+		end)
+	end)
 end
 
 function Controls:draw()
@@ -485,10 +507,10 @@ function Controls:draw()
 					self.h - 4
 				)
 			end
-			if i == #self.color_options then
-				print("LAST COLOR IS: ", utils.dump(opt))
-			end
 		end
+		self.add_color_button.x = #self.color_options * self.color_opt_width + 2
+		self.add_color_button.y = self.y + 2 + self.color_opt_height
+		self.add_color_button:draw()
 	else
 		for i, opt in pairs(self.color_options) do
 			love.graphics.setColor(opt.r, opt.g, opt.b, opt.a or 1)

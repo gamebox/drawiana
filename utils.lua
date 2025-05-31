@@ -40,6 +40,24 @@ M.extend_table = function(base, extends_table)
 	end
 end
 
+---@generic T
+---@generic K
+---@generic V
+---@param table `T`
+---@param key `K`
+---@param value `V`
+---@reutnrs T +{ [K]: V }
+M.with = function(table, key, value)
+	local _with = {}
+
+	for k, v in pairs(table) do
+		_with[k] = v
+	end
+	_with[key] = value
+
+	return _with
+end
+
 M.dump = dump
 
 return M
