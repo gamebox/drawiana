@@ -34,6 +34,12 @@ M.fromrgb = function(rgb)
 	return math.ceil(rgb / 256 * 100) / 100
 end
 
+M.extend_table = function(base, extends_table)
+	for k, v in pairs(extends_table) do
+		base[k] = v
+	end
+end
+
 M.dump = dump
 
 return M

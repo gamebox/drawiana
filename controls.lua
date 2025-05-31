@@ -1,7 +1,13 @@
-local Rectangle = require("tools").Rectangle
-local Line = require("tools").Line
-local Text = require("tools").Text
-local Circle = require("tools").Circle
+local tools = require("tools")
+local slider = require("designsystem.slider")
+local Rectangle = tools.Rectangle
+local Line = tools.Line
+local Text = tools.Text
+local Circle = tools.Circle
+local View = require("view").View
+local Dialog = require("dialog").Dialog
+local Button = require("designsystem.button").Button
+local utils = require("utils")
 
 local M = {}
 
@@ -11,7 +17,7 @@ local M = {}
 ---@type Orientation
 local HORIZONTAL = 0
 ---@type Orientation
-local VERITCAL = 1
+local VERTICAL = 1
 
 ---@type Color
 local black = { r = 0, g = 0, b = 0 }
@@ -40,24 +46,171 @@ local color_options = {
 	black,
 }
 
----@class Controls table
----@field x number
----@field y number
----@field h number
----@field w number
+---@class ColorDialog : View
+---@field r number The initial value for the red slider
+---@field g number The initial value for the green slider
+---@field b number The initial value for the blue slider
+---@field private ok_button Button
+---@field private cancel_button Button
+---@field private red_slider Slider
+---@field private green_slider Slider
+---@field private blue_slider Slider
+local ColorDialog = View:new({ r = 0, g = 0, b = 0, on_save = function() end })
+
+---Create a new ColorDialog
+---@param x number
+---@param y number
+---@param w number
+---@param h number
+---@param on_save function(color: Color|nil)
+---@return ColorDialog
+function ColorDialog:new(x, y, w, h, on_save)
+	local dialog = setmetatable({}, self)
+	self.__index = self
+
+	dialog.x = x
+	dialog.y = y
+	dialog.h = h
+	dialog.w = w
+
+	dialog.cancel_button = Button:new("Cancel", function()
+		on_save(nil)
+	end)
+	local slider_height = 16
+
+	dialog.red_slider = slider.Slider:new(
+		x + 4,
+		y + 48,
+		dialog.w - 8,
+		slider_height,
+		{ track_height = slider_height, fill_color = color_options[1], value = 20 }
+	)
+	dialog.green_slider = slider.Slider:new(
+		x + 4,
+		y + 48 + slider_height + 4,
+		dialog.w - 8,
+		slider_height,
+		{ track_height = slider_height, fill_color = color_options[8], value = 40 }
+	)
+	dialog.blue_slider = slider.Slider:new(
+		x + 4,
+		y + 48 + ((slider_height + 4) * 2),
+		dialog.w - 8,
+		slider_height,
+		{ track_height = slider_height, fill_color = color_options[12], value = 60 }
+	)
+
+	dialog.cancel_button.x = x + w - dialog.cancel_button.w - 4
+	dialog.cancel_button.y = y + h - dialog.cancel_button.h - 4
+
+	dialog.ok_button = Button:new("Ok", function()
+		on_save({ r = dialog.r / 100, g = dialog.g / 100, b = dialog.b / 100 })
+	end)
+
+	dialog.ok_button.x = dialog.cancel_button.x - 4 - dialog.ok_button.w
+	dialog.ok_button.y = dialog.cancel_button.y
+	dialog.ok_button.bgcolor = { r = 0, g = 0.1, b = 0.6, a = 1 }
+
+	return dialog
+end
+
+function ColorDialog:update(dt)
+	_ = dt
+	self.r = self.red_slider.value
+	self.g = self.green_slider.value
+	self.b = self.blue_slider.value
+end
+
+function ColorDialog:mousemoved(x, y)
+	self.red_slider:mousemoved(x, y)
+	self.blue_slider:mousemoved(x, y)
+	self.green_slider:mousemoved(x, y)
+	self.cancel_button:mousemoved(x, y)
+	self.ok_button:mousemoved(x, y)
+end
+
+function ColorDialog:mousepressed(x, y)
+	if
+		self.red_slider:mousepressed(x, y)
+		or self.blue_slider:mousepressed(x, y)
+		or self.green_slider:mousepressed(x, y)
+		or self.cancel_button:mousepressed(x, y)
+		or self.ok_button:mousepressed(x, y)
+	then
+		return true
+	end
+	return false
+end
+
+function ColorDialog:mousereleased(x, y)
+	if
+		self.red_slider:mousereleased(x, y)
+		or self.blue_slider:mousereleased(x, y)
+		or self.green_slider:mousereleased(x, y)
+		or self.cancel_button:mousereleased(x, y)
+		or self.ok_button:mousereleased(x, y)
+	then
+		return true
+	end
+	return false
+end
+
+function ColorDialog:keypressed(combo)
+	if
+		self.red_slider:keypressed(combo)
+		or self.blue_slider:keypressed(combo)
+		or self.green_slider:keypressed(combo)
+		or self.cancel_button:keypressed(combo)
+		or self.ok_button:keypressed(combo)
+	then
+		return true
+	end
+	return false
+end
+
+function ColorDialog:keyreleased()
+	if
+		self.red_slider:keyreleased()
+		or self.blue_slider:keyreleased()
+		or self.green_slider:keyreleased()
+		or self.cancel_button:keyreleased()
+		or self.ok_button:keyreleased()
+	then
+		return true
+	end
+	return false
+end
+
+local title_font = love.graphics.newFont(20)
+
+function ColorDialog:draw()
+	love.graphics.setColor(1, 1, 1, 1)
+	local text = love.graphics.newText(title_font, "Configure Color")
+	love.graphics.draw(text, self.x + 4, self.y + 4)
+	-- draw sliders
+	self.red_slider:draw()
+	self.green_slider:draw()
+	self.blue_slider:draw()
+	love.graphics.setColor(self.red_slider.value / 100, self.green_slider.value / 100, self.blue_slider.value / 100, 1)
+	love.graphics.rectangle("fill", self.blue_slider.x, self.blue_slider.y + self.blue_slider.h + 8, 24, 24)
+	-- draw buttons
+	self.cancel_button:draw()
+	self.ok_button:draw()
+end
+
+---@class Controls : View
 ---@field current_color Color
 ---@field current_line_width number
 ---@field color_opt_width number
 ---@field color_opt_height number
 ---@field orientation Orientation
 ---@field tool string
+---@field tools string[]
 ---@field tool_options Tool[]
+---@field tool_indexes { [string]: number }
 ---@field color_options Color[]
-local Controls = {
-	x = 0,
-	y = 0,
-	h = 0,
-	w = 0,
+---@field color_dialog ColorDialog|nil
+local Controls = View:new({
 	current_color = white,
 	current_line_width = 1,
 	color_opt_height = 0,
@@ -66,23 +219,42 @@ local Controls = {
 	tool = "line",
 	tool_options = {},
 	tools = { "rectangle", "rectangle_outline", "circle", "circle_outline", "line", "text" },
+	tool_indexes = {},
 	color_options = color_options,
-}
+})
 
+---Creates a new Controls view.  Is a valid [View](lua://View)
 ---@param x number The x position where the controls will render
 ---@param y number The y position where the controls will render
 ---@param h number The amount of pixels given to the controls to render in the x-axis
 ---@param w number The amount of pixels given to the controls to render in the y-axis
 function Controls:new(x, y, h, w)
-	local c = {
-		x = x,
-		y = y,
-		h = h,
-		w = w,
-		current_color = white,
-		tool = "line",
-		tool_options = {},
-	}
+	---@type Controls
+	local controls = setmetatable({}, self)
+	self.__index = self
+
+	controls.x = x
+	controls.y = y
+	controls.h = h
+	controls.w = w
+	controls.current_color = color_options[13]
+	controls.tool = controls.tools[5]
+	controls.tool_options = {}
+	controls.tool_indexes = {}
+	controls.color_dialog = nil
+
+	for i, t in ipairs(Controls.tools) do
+		controls.tool_indexes[t] = i
+	end
+
+	controls:setup_tools()
+
+	return controls
+end
+
+function Controls:setup_tools()
+	local controls = self
+	local h, w = controls.h, controls.w
 	local r = Rectangle:new(1, black)
 	r.mode = "fill"
 	local r2 = Rectangle:new(3, black)
@@ -95,78 +267,81 @@ function Controls:new(x, y, h, w)
 	local t = Text:new(1, black)
 	t.size = 20
 	t.text = "T"
-	table.insert(c.tool_options, r)
-	table.insert(c.tool_options, r2)
-	table.insert(c.tool_options, circle)
-	table.insert(c.tool_options, circle_o)
-	table.insert(c.tool_options, l)
-	table.insert(c.tool_options, t)
+	table.insert(controls.tool_options, r)
+	table.insert(controls.tool_options, r2)
+	table.insert(controls.tool_options, circle)
+	table.insert(controls.tool_options, circle_o)
+	table.insert(controls.tool_options, l)
+	table.insert(controls.tool_options, t)
 	if h > w then
-		c.orientation = VERITCAL
-		c.color_opt_width = 40
-		c.color_opt_height = math.floor(c.h / #color_options)
+		controls.orientation = VERTICAL
+		controls.color_opt_width = 40
+		controls.color_opt_height = math.floor(controls.h / #color_options)
 		local border = 2
-		r.start = { x = c.x + border, y = c.y + border }
-		r.end_ = { x = c.x + c.color_opt_width - 2, y = c.y + c.color_opt_height - 2 }
-		r2.start = { x = c.x, y = c.y }
-		r2.end_ = { x = c.x + (c.color_opt_width - 2) * 2, y = c.y + c.color_opt_height - 2 }
+		r.start = { x = controls.x + border, y = controls.y + border }
+		r.end_ = { x = controls.x + controls.color_opt_width - 2, y = controls.y + controls.color_opt_height - 2 }
+		r2.start = { x = controls.x, y = controls.y }
+		r2.end_ =
+			{ x = controls.x + (controls.color_opt_width - 2) * 2, y = controls.y + controls.color_opt_height - 2 }
 		l.points = {}
 	else
 		local border = 2
-		c.orientation = HORIZONTAL
-		c.color_opt_width = 40
-		c.color_opt_height = math.floor(c.h / 2)
-		local xoffset = c.x
-		r.start = { x = xoffset + 2, y = c.y + 2 }
-		r.end_ = { x = xoffset + c.color_opt_width - 4, y = c.y + c.color_opt_height - 2 }
-		xoffset = xoffset + c.color_opt_width
-		r2.start = { x = xoffset + 4, y = c.y + 4 }
-		r2.end_ = { x = xoffset + c.color_opt_width - 4, y = c.y + c.color_opt_height - 4 }
-		xoffset = xoffset + c.color_opt_width
-		circle.radiusx = c.color_opt_width / 2 - 5
-		circle.radiusy = c.color_opt_height / 2 - 5
-		circle.origin = { x = xoffset + (c.color_opt_width / 2), y = c.y + (c.color_opt_height / 2) }
-		xoffset = xoffset + c.color_opt_width
-		circle_o.radiusx = c.color_opt_width / 2 - 7
-		circle_o.radiusy = c.color_opt_height / 2 - 7
-		circle_o.origin = { x = xoffset + (c.color_opt_width / 2), y = c.y + (c.color_opt_height / 2) }
-		xoffset = xoffset + c.color_opt_width
+		controls.orientation = HORIZONTAL
+		controls.color_opt_width = 40
+		controls.color_opt_height = math.floor(controls.h / 2)
+		local xoffset = controls.x
+		r.start = { x = xoffset + 2, y = controls.y + 2 }
+		r.end_ = { x = xoffset + controls.color_opt_width - 4, y = controls.y + controls.color_opt_height - 2 }
+		xoffset = xoffset + controls.color_opt_width
+		r2.start = { x = xoffset + 4, y = controls.y + 4 }
+		r2.end_ = { x = xoffset + controls.color_opt_width - 4, y = controls.y + controls.color_opt_height - 4 }
+		xoffset = xoffset + controls.color_opt_width
+		circle.radiusx = controls.color_opt_width / 2 - 5
+		circle.radiusy = controls.color_opt_height / 2 - 5
+		circle.origin =
+			{ x = xoffset + (controls.color_opt_width / 2), y = controls.y + (controls.color_opt_height / 2) }
+		xoffset = xoffset + controls.color_opt_width
+		circle_o.radiusx = controls.color_opt_width / 2 - 7
+		circle_o.radiusy = controls.color_opt_height / 2 - 7
+		circle_o.origin =
+			{ x = xoffset + (controls.color_opt_width / 2), y = controls.y + (controls.color_opt_height / 2) }
+		xoffset = xoffset + controls.color_opt_width
 		l.points = {
 			xoffset + 8,
-			c.y + 8,
-			xoffset + c.color_opt_width - 8,
-			c.y + c.color_opt_height - 8,
+			controls.y + 8,
+			xoffset + controls.color_opt_width - 8,
+			controls.y + controls.color_opt_height - 8,
 		}
 		l:setColor(selected_color)
-		xoffset = xoffset + c.color_opt_width
-		t.start = { x = xoffset + border + 12, y = c.y + border }
+		xoffset = xoffset + controls.color_opt_width
+		t.start = { x = xoffset + border + 12, y = controls.y + border }
 	end
 
 	r:set_dimensions()
 	r2:set_dimensions()
-
-	setmetatable(c, self)
-	self.__index = self
-
-	return c
 end
 
 function Controls:alter_line_width(delta)
 	self.current_line_width = (math.min(300, math.max(0, self.current_line_width + delta)))
 end
 
----@param controls Controls
----@param x number
----@param y number
-local in_area = function(controls, x, y)
-	if x < controls.x or y < controls.y or x > (controls.x + controls.w) or y > (controls.y + controls.h) then
-		return false
+function Controls:mousemoved(x, y)
+	if self.color_dialog ~= nil then
+		self.color_dialog:mousemoved(x, y)
 	end
-	return true
+end
+
+function Controls:mousereleased(x, y)
+	if self.color_dialog ~= nil and self.color_dialog:mousereleased(x, y) then
+		return true
+	end
 end
 
 function Controls:mousepressed(x, y)
-	if in_area(self, x, y) then
+	if self.color_dialog ~= nil and self.color_dialog:mousepressed(x, y) then
+		return true
+	end
+	if self:inarea(x, y) then
 		local index = 1
 		while x > index * self.color_opt_width do
 			index = index + 1
@@ -194,23 +369,58 @@ end
 
 function Controls:keypressed(combo)
 	local idx = 0
+
+	if self.color_dialog ~= nil and self.color_dialog:keypressed(combo) then
+		return true
+	end
 	if combo == "r" then
-		idx = 1
+		idx = self.tool_indexes["rectangle"]
 		self.tool = "rectangle"
-	-- elseif combo == "c" then
-	-- 	self.tool = "circle"
-	-- 	return true
 	elseif combo == "Shift+r" then
-		idx = 2
+		idx = self.tool_indexes["rectangle_outline"]
 		self.tool = "rectangle_outline"
-	-- elseif combo == "Shift+c" then
-	-- 	self.tool = "circle_outline"
+	elseif combo == "c" then
+		idx = self.tool_indexes["circle"]
+		self.tool = "circle"
+	elseif combo == "Shift+c" then
+		idx = self.tool_indexes["circle_outline"]
+		self.tool = "circle_outline"
 	elseif combo == "l" then
-		idx = 3
+		idx = self.tool_indexes["line"]
 		self.tool = "line"
 	elseif combo == "t" then
-		idx = 4
+		idx = self.tool_indexes["text"]
 		self.tool = "text"
+	elseif combo == "1" then
+		self.current_color = color_options[1]
+		idx = self.tool_indexes[self.tool]
+	elseif combo == "2" then
+		self.current_color = color_options[2]
+		idx = self.tool_indexes[self.tool]
+	elseif combo == "3" then
+		self.current_color = color_options[3]
+		idx = self.tool_indexes[self.tool]
+	elseif combo == "4" then
+		self.current_color = color_options[4]
+		idx = self.tool_indexes[self.tool]
+	elseif combo == "5" then
+		self.current_color = color_options[5]
+		idx = self.tool_indexes[self.tool]
+	elseif combo == "6" then
+		self.current_color = color_options[6]
+		idx = self.tool_indexes[self.tool]
+	elseif combo == "7" then
+		self.current_color = color_options[7]
+		idx = self.tool_indexes[self.tool]
+	elseif combo == "8" then
+		self.current_color = color_options[8]
+		idx = self.tool_indexes[self.tool]
+	elseif combo == "9" then
+		self.current_color = color_options[9]
+		idx = self.tool_indexes[self.tool]
+	elseif combo == "0" then
+		self.current_color = color_options[10]
+		idx = self.tool_indexes[self.tool]
 	end
 	if idx > 0 then
 		self.tool = self.tools[idx]
@@ -233,6 +443,21 @@ function Controls:keypressed(combo)
 		self:alter_line_width(-10)
 		return true
 	end
+	if combo == "Shift+=" and self.color_dialog == nil then
+		local zelf = self
+		self.color_dialog = Dialog:new("md", function(x, y, w, h)
+			return ColorDialog:new(x, y, w, h, function(color)
+				if color ~= nil then
+					print("SAVED", utils.dump(color))
+					table.insert(color_options, #color_options + 1, color)
+					self.color_options = color_options
+					print("INSERTED: ", utils.dump(color_options[#color_options]))
+				end
+				zelf.color_dialog = nil
+			end)
+		end)
+		return true
+	end
 	return false
 end
 
@@ -240,7 +465,7 @@ function Controls:draw()
 	love.graphics.setColor(0.75, 0.75, 0.75, 1)
 	love.graphics.rectangle("fill", self.x, self.y, self.w, self.color_opt_height)
 	if self.orientation == HORIZONTAL then
-		for i, opt in pairs(color_options) do
+		for i, opt in pairs(self.color_options) do
 			love.graphics.setColor(opt.r, opt.g, opt.b, opt.a or 1)
 			love.graphics.rectangle(
 				"fill",
@@ -260,9 +485,12 @@ function Controls:draw()
 					self.h - 4
 				)
 			end
+			if i == #self.color_options then
+				print("LAST COLOR IS: ", utils.dump(opt))
+			end
 		end
 	else
-		for i, opt in pairs(color_options) do
+		for i, opt in pairs(self.color_options) do
 			love.graphics.setColor(opt.r, opt.g, opt.b, opt.a or 1)
 			love.graphics.rectangle(
 				"fill",
@@ -290,11 +518,18 @@ function Controls:draw()
 	-- TODO: Implement add color button
 	love.graphics.setColor(black.r, black.g, black.b, black.a or 1)
 	love.graphics.print("" .. self.current_line_width, self.w - 50, self.y + 2)
+	if self.color_dialog ~= nil then
+		self.color_dialog:draw()
+	end
 end
 
 ---@param dt number
 ---@diagnostic disable-next-line unused-argument
-function Controls:update(dt) end
+function Controls:update(dt)
+	if self.color_dialog ~= nil then
+		self.color_dialog:update(dt)
+	end
+end
 
 ---@return Tool
 function Controls:newtool()

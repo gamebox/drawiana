@@ -36,6 +36,7 @@ function love.keypressed(_, scancode)
 	if not emitted or combo == nil then
 		return
 	end
+	print("Combo", combo)
 	if combo == "Meta+q" then
 		love.event.quit(0)
 	end
@@ -48,7 +49,6 @@ function love.keypressed(_, scancode)
 		screen = MainMenu:new(loadNewFile)
 		return
 	end
-	print("Combo", combo)
 	screen:keypressed(combo)
 end
 
@@ -70,7 +70,7 @@ function love.load(args)
 
 	-- The window's flags contain the index of the monitor it's currently in.
 	local width, height = love.window.getDesktopDimensions(flags.display)
-	love.window.setMode(math.floor(width * 0.75), math.floor(height * 0.75), { centered = false })
+	love.window.setMode(math.floor(width * 0.4), math.floor(height * 0.95), { centered = false })
 	screen = MainMenu:new(loadNewFile)
 	background_screen = nil
 end

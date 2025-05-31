@@ -92,6 +92,7 @@ function Editor:mousemoved(x, y)
 		return
 	end
 	self.current_tool:mousemoved(x, y)
+	self.controls:mousemoved(x, y)
 end
 
 ---@param x number
@@ -120,6 +121,7 @@ function Editor:mousepressed(x, y)
 end
 
 function Editor:mousereleased(x, y)
+	self.controls:mousereleased(x, y)
 	if self.save_file_dialog ~= nil then
 		self.save_file_dialog:mousereleased(x, y)
 		return true

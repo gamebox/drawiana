@@ -50,6 +50,7 @@ end
 
 function Button:mousepressed(x, y)
 	if self:inarea(x, y) then
+		print("Button:mousepressed inarea")
 		self.pressed = true
 		return true
 	end
@@ -58,6 +59,7 @@ end
 
 function Button:mousemoved(x, y)
 	if self:inarea(x, y) then
+		print("Button:mousemoved inarea")
 		self.hovered = true
 		return
 	end
@@ -65,10 +67,12 @@ function Button:mousemoved(x, y)
 		self.hovered = false
 		return
 	end
+	self.pressed = false
 end
 
 function Button:mousereleased(x, y)
 	if self:inarea(x, y) and self.pressed then
+		print("Button:mousereleased inarea")
 		self.onclick()
 		self.pressed = false
 	end

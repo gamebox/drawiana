@@ -1,3 +1,5 @@
+local utils = require("./utils")
+
 local M = {}
 
 ---@class View
@@ -8,7 +10,7 @@ local M = {}
 ---@field active boolean
 local View = {}
 
-function View:new()
+function View:new(extended)
 	local v = {
 		x = 0,
 		y = 0,
@@ -16,6 +18,9 @@ function View:new()
 		w = 0,
 		active = true,
 	}
+
+	utils.extend_table(v, extended or {})
+
 	setmetatable(v, self)
 	self.__index = self
 	return v

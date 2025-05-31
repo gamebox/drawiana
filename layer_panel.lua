@@ -1,6 +1,7 @@
 -- Import View parent class for all views
 local View = require("view").View
-local toolnames = require("tools").toolnames
+local tools = require("tools")
+local toolnames = tools.toolnames
 local List = require("designsystem.list").List
 
 -- Create module table
