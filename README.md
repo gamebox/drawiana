@@ -2,6 +2,8 @@
 
 Just a silly art program I'm making with my daughter using [LÖVE](https://love2d.org/).
 
+![Here's what drawiana looks like](/drawiana.png "Screenshot of drawiana")
+
 ## Philosophy
 You should be able to make art, mockups, etc. quickly and easily with either your keyboard or your mouse.
 
