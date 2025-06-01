@@ -1,30 +1,8 @@
--- Import View parent class for all views
 local View = require("view").View
-local tools = require("tools")
-local toolnames = tools.toolnames
 local List = require("designsystem.list").List
 
--- Create module table
 local M = {}
 
----@param tool Tool
-local function layer_name(tool)
-	local toolname = tool.toolname
-	if toolname == toolnames.rectangle then
-		return "Rectangle"
-	elseif toolname == toolnames.circle then
-		return "Circle"
-	elseif toolname == toolnames.line then
-		return "Line"
-	elseif toolname == toolnames.text then
-		local t = tool --[[@as Text]]
-		return 'Text - "' .. t.text .. '"'
-	else
-		return "Unknown"
-	end
-end
-
--- Create class table
 ---@class LayerPanel : View
 ---@field list List
 ---@field selected number
@@ -32,7 +10,6 @@ local LayerPanel = View:new()
 
 local padding = 4
 
--- Constructor for class
 ---@param layers Tool[]
 ---@param x number
 ---@param y number
@@ -53,10 +30,12 @@ function LayerPanel:new(layers, x, y, w, h)
 	return lp
 end
 
+---@param layers Tool[]
+---@param focused boolean
 function LayerPanel:new_layers(layers, focused)
 	local layer_text = {}
 	for _, layer in ipairs(layers) do
-		local to = layer_name(layer)
+		local to = layer:get_name()
 		table.insert(layer_text, to)
 	end
 

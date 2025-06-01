@@ -19,8 +19,14 @@ You should be able to make art, mockups, etc. quickly and easily with either you
 
 ## Roadmap
 - [x] List component support mouse
-- [ ] Focus management in design system components
+- [x] Name layers
+- [x] Move layers in the stack
+- [x] Delete layers
+- [ ] Straight line tool
+- [ ] Change background color
+- [ ] Group layers
 - [ ] Layer property editing and viewing
+- [ ] Focus management in design system components
 - [ ] Grid / snap to grid
 - [ ] Multiple documents open
 - [ ] Gradients
@@ -28,5 +34,10 @@ You should be able to make art, mockups, etc. quickly and easily with either you
 - [ ] Font styles
 - [ ] Text effects
 - [ ] Shadows
-- [ ] Change background color
 - [ ] Export to raster image
+- [ ] Rotate / Resize layers
+- [ ] Change opacity for a layer
+- [ ] Import custom shape tools
+- [ ] Lua scripting
+- [ ] Command palette
+- [ ] Layer filters

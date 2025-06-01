@@ -2,7 +2,6 @@ local KeyHandler = require("keyhandler").KeyHandler
 local Editor = require("editor").Editor
 local MainMenu = require("main_menu").MainMenu
 local keyhandler = KeyHandler:new()
-local dump = require("utils").dump
 local lovetest = require("test/lovetest")
 
 local screen
@@ -36,7 +35,7 @@ function love.keypressed(_, scancode)
 	if not emitted or combo == nil then
 		return
 	end
-	print("Combo", combo)
+	-- print("Combo", combo)
 	if combo == "Meta+q" then
 		love.event.quit(0)
 	end

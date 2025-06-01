@@ -1,7 +1,6 @@
 local View = require("view").View
 local Controls = require("controls").Controls
 local toolfactory = require("tools").toolfactory
-local dump = require("utils").dump
 local file_format = require("file_format")
 local dialog = require("dialog")
 local heading = require("designsystem.heading")
@@ -12,16 +11,46 @@ local layer_panel = require("layer_panel")
 local M = {}
 
 ---@class Editor : View
----@field h number
----@field w number
 ---@field controls Controls
 ---@field current_tool Tool
 ---@field stack Tool[]
 ---@field undo_stack Tool[]
----@field save_file_dialog Dialog|nil
+---@field open_dialog Dialog|nil
 ---@field currentfilename string|nil
 ---@field layer_panel LayerPanel|nil
 local Editor = View:new()
+
+function Editor:debug()
+	print("===", "Editor:debug", "===")
+	print("Controls", self.controls)
+	print("Current Tool", self.current_tool:get_name())
+	print("---", "Stack:", self.stack, "---")
+	for _, tool in ipairs(self.stack) do
+		print("   ", tool:get_name(), tool)
+	end
+	print("---", "Stack END", "---")
+	print("---", "Undo Stack", self.undo_stack, "---")
+	for _, tool in ipairs(self.undo_stack) do
+		print("   ", tool:get_name(), tool)
+	end
+	print("---", "Undo Stack END", "---")
+	if self.currentfilename then
+		print("Using filename", self.currentfilename)
+	else
+		print("No filename")
+	end
+	if self.open_dialog then
+		print("Dialog open", self.open_dialog)
+	else
+		print("Dialog closed", self.open_dialog)
+	end
+	if self.layer_panel then
+		print("Layer Panel open", self.layer_panel)
+	else
+		print("Layer Panel closed", self.layer_panel)
+	end
+	print("===", "Editor:debug END", "===")
+end
 
 function Editor:push_current_on_stack()
 	table.insert(self.stack, self.current_tool)
@@ -35,10 +64,10 @@ function Editor:new(name)
 	local stack = {}
 	if name ~= nil and name ~= "" then
 		print("Opening " .. name)
-		local file, opened, ok, err, state
+		local file, ok, err, state
 		file, err = love.filesystem.newFile(name, "r")
-		opened, err = file:open("r")
-		if not opened then
+		_, err = file:open("r")
+		if err ~= nil and err ~= "" then
 			print("Could not open file: " .. (err or "No error specified"))
 		end
 		ok, state = file_format.FileFormat:deserialize(file)
@@ -46,7 +75,6 @@ function Editor:new(name)
 		if ok and state ~= nil then
 			for _, t in pairs(state.stack) do
 				local tool
-				print(dump(t))
 				ok, tool = toolfactory(t)
 				if ok then
 					table.insert(stack, tool)
@@ -80,8 +108,8 @@ function Editor:new(name)
 end
 
 function Editor:mousemoved(x, y)
-	if self.save_file_dialog ~= nil then
-		self.save_file_dialog:mousemoved(x, y)
+	if self.open_dialog ~= nil then
+		self.open_dialog:mousemoved(x, y)
 		return
 	end
 	if self.layer_panel ~= nil then
@@ -95,9 +123,9 @@ end
 ---@param x number
 ---@param y number
 function Editor:mousepressed(x, y)
-	if self.save_file_dialog ~= nil then
-		if self.save_file_dialog:mousepressed(x, y) and self.save_file_dialog.shouldclose then
-			self.save_file_dialog = nil
+	if self.open_dialog ~= nil then
+		if self.open_dialog:mousepressed(x, y) and self.open_dialog.shouldclose then
+			self.open_dialog = nil
 		end
 		return true
 	end
@@ -119,8 +147,8 @@ end
 
 function Editor:mousereleased(x, y)
 	self.controls:mousereleased(x, y)
-	if self.save_file_dialog ~= nil then
-		self.save_file_dialog:mousereleased(x, y)
+	if self.open_dialog ~= nil then
+		self.open_dialog:mousereleased(x, y)
 		return true
 	end
 	if self.layer_panel ~= nil then
@@ -136,8 +164,8 @@ function Editor:mousereleased(x, y)
 end
 
 function Editor:keyreleased()
-	if self.save_file_dialog ~= nil then
-		self.save_file_dialog:keyreleased()
+	if self.open_dialog ~= nil then
+		self.open_dialog:keyreleased()
 		return true
 	end
 	if self.layer_panel ~= nil then
@@ -146,28 +174,47 @@ function Editor:keyreleased()
 	end
 end
 
-function Editor:openSaveDialog()
-	self.save_file_dialog = dialog.Dialog:new("sm", function(xoffset, yoffset, w, h)
-		local view = {}
-		local meta = View:new()
-		setmetatable(view, meta)
-		meta.__index = meta
+function Editor:open_save_dialog()
+	self:open_text_entry_dialog("Save file", self.currentfilename or "", function(inp)
+		self:save(inp.rawText)
+	end)
+end
 
-		view.content = {}
+---@param layer Tool
+function Editor:open_layer_name_change_dialog(layer)
+	local zelf = self
+	self:open_text_entry_dialog("Change layer name", layer:get_name() or "", function(inp)
+		layer.name = inp.rawText
+		zelf.layer_panel:new_layers(self.stack, true)
+	end)
+end
 
-		local head = heading.Heading:new("Save file", 24)
-		local inp = input.Input:new(self.currentfilename or "")
+---@param title string
+---@param initial string
+---@param okclicked function(input: Input)
+function Editor:open_text_entry_dialog(title, initial, okclicked)
+	if self.open_dialog ~= nil then
+		return
+	end
+	self.open_dialog = dialog.Dialog:new("sm", function(xoffset, yoffset, w, h)
+		local Meta = View:new()
+		local view = setmetatable({}, Meta)
+		Meta.__index = Meta
+
+		local head = heading.Heading:new(title, 24)
+		local inp = input.Input:new(initial)
 		local okbutton = button.Button:new("Ok", function()
-			self:save(inp.rawText)
+			okclicked(inp)
+			self:dismiss_save_dialog()
 		end)
 		local cancelbutton = button.Button:new("Cancel", function()
-			self:dismissSaveDialog()
+			self:dismiss_save_dialog()
 		end)
 
-		table.insert(view.content, head)
-		table.insert(view.content, inp)
-		table.insert(view.content, okbutton)
-		table.insert(view.content, cancelbutton)
+		table.insert(view.children, head)
+		table.insert(view.children, inp)
+		table.insert(view.children, okbutton)
+		table.insert(view.children, cancelbutton)
 
 		local padding = 8
 
@@ -181,43 +228,6 @@ function Editor:openSaveDialog()
 		cancelbutton.x = okbutton.x - 4 - cancelbutton.w
 		cancelbutton.y = okbutton.y
 
-		view.mousepressed = function(zelf, x, y)
-			for _, v in pairs(zelf.content) do
-				if v:mousepressed(x, y) then
-					return
-				end
-			end
-		end
-		view.mousemoved = function(zelf, x, y)
-			for _, v in pairs(zelf.content) do
-				v:mousemoved(x, y)
-			end
-		end
-		view.mousereleased = function(zelf, x, y)
-			for _, v in pairs(zelf.content) do
-				if v:mousereleased(x, y) then
-					return
-				end
-			end
-		end
-		view.keypressed = function(zelf, combo)
-			for _, v in pairs(zelf.content) do
-				if v:keypressed(combo) then
-					return
-				end
-			end
-		end
-		view.update = function(zelf, dt)
-			for _, v in pairs(zelf.content) do
-				v:update(dt)
-			end
-		end
-		view.draw = function(zelf)
-			for _, v in pairs(zelf.content) do
-				v:draw()
-			end
-		end
-
 		return view
 	end)
 end
@@ -228,13 +238,13 @@ function Editor:save(name)
 	if name ~= nil then
 		local file, _ = love.filesystem.newFile(name)
 		if file == nil then
-			self.save_file_dialog = nil
+			self.open_dialog = nil
 			return
 		end
 		local opened, err = file:open("w")
 		if not opened then
 			print("couldn't open: " .. err)
-			self.save_file_dialog = nil
+			self.open_dialog = nil
 			return
 		end
 		local success, err_ = file_format.FileFormat:persist(file, self.stack, {})
@@ -242,12 +252,12 @@ function Editor:save(name)
 			print("couldn't save: " .. err_)
 		end
 		file:close()
-		self.save_file_dialog = nil
+		self.open_dialog = nil
 	end
 end
 
-function Editor:dismissSaveDialog()
-	self.save_file_dialog = nil
+function Editor:dismiss_save_dialog()
+	self.open_dialog = nil
 end
 
 function Editor:toggle_layer_panel()
@@ -258,46 +268,41 @@ function Editor:toggle_layer_panel()
 	end
 end
 
+---@param combo string
+---@return boolean
 function Editor:keypressed(combo)
 	if combo == "Shift+Meta+d" then
-		print("STACK:")
-		print(dump(self.stack))
-		print("CURRENT TOOL:")
-		print(dump(self.current_tool))
-		print("layer_panel view:")
-		print(dump(self.layer_panel))
-		return
+		self:debug()
+		return true
 	end
 	if combo == "Meta+s" then
-		self:openSaveDialog()
-		return
-	end
-	if combo == "Meta+o" then
-		print("TODO: implement open file from editor!")
-		return
+		self:open_save_dialog()
+		return true
 	end
 	if combo == "Meta+l" then
 		self:toggle_layer_panel()
-		return
-	end
-	if combo == "Meta+backspace" then
-		print(combo .. " " .. (self.layer_panel or { selected = 999999999 }).selected)
-		print(dump(self.layer_panel))
+		return true
 	end
 	if combo == "Meta+backspace" and self.layer_panel ~= nil and self.layer_panel.selected > 0 then
 		table.remove(self.stack, self.layer_panel.selected)
-		if self.layer_panel ~= nil then
-			self.layer_panel = layer_panel.LayerPanel:new(self.stack, self.w - 300, 0, 300)
+		if self.layer_panel ~= nil and #self.stack > 0 then
+			local new_selected = self.layer_panel.selected - 1
+			self.layer_panel:new_layers(self.stack, true)
+			self.layer_panel:select(new_selected)
 		end
-		return
+		return true
 	end
-	if self.save_file_dialog ~= nil then
-		if self.save_file_dialog:keypressed(combo) and self.save_file_dialog.shouldclose then
-			self.save_file_dialog = nil
+	if self.open_dialog ~= nil then
+		if self.open_dialog:keypressed(combo) and self.open_dialog.shouldclose then
+			self.open_dialog = nil
 		end
 		return true
 	end
 	if self.layer_panel ~= nil then
+		if combo == "Meta+r" then
+			self:open_layer_name_change_dialog(self.stack[self.layer_panel.selected])
+			return true
+		end
 		if self.layer_panel:keypressed(combo) then
 			return true
 		end
@@ -337,8 +342,8 @@ function Editor:keypressed(combo)
 			local curr = self.stack[sel]
 			self.stack[sel - 1] = curr
 			self.stack[sel] = swapping
-			self.layer_panel:new_layers(self.stack)
-			self.layer_panel.selected = sel - 1
+			self.layer_panel:new_layers(self.stack, true)
+			self.layer_panel:select(sel - 1)
 			return true
 		elseif combo == "Meta+down" then
 			local sel = self.layer_panel.selected
@@ -349,8 +354,22 @@ function Editor:keypressed(combo)
 			local curr = self.stack[sel]
 			self.stack[sel + 1] = curr
 			self.stack[sel] = swapping
-			self.layer_panel:new_layers(self.stack)
-			self.layer_panel.selected = sel + 1
+			self.layer_panel:new_layers(self.stack, true)
+			self.layer_panel:select(sel + 1)
+			return true
+		elseif combo == "Shift+Meta+down" then
+			print("Moving to the top")
+			table.remove(self.stack, self.layer_panel.selected)
+			table.insert(self.stack, selected_tool)
+			self.layer_panel:select(#self.stack)
+			self.layer_panel:new_layers(self.stack, true)
+			return true
+		elseif combo == "Shift+Meta+up" then
+			print("Moving to the bottom")
+			table.remove(self.stack, self.layer_panel.selected)
+			table.insert(self.stack, 1, selected_tool)
+			self.layer_panel:new_layers(self.stack, true)
+			self.layer_panel:select(1)
 			return true
 		end
 	end
@@ -358,11 +377,11 @@ function Editor:keypressed(combo)
 		if not self.current_tool.building then
 			self:push_current_on_stack()
 		end
-		return
+		return true
 	end
 	if self.controls:keypressed(combo) then
 		self.current_tool = self.controls:newtool()
-		return
+		return true
 	end
 	if combo == "u" then
 		local undone = table.remove(self.stack, #self.stack)
@@ -370,18 +389,21 @@ function Editor:keypressed(combo)
 			self.layer_panel = layer_panel.LayerPanel:new(self.stack, self.w - 300, 0, 300)
 		end
 		table.insert(self.undo_stack, undone)
+		return true
 	elseif combo == "Shift+u" and #self.undo_stack > 0 then
 		local redone = table.remove(self.undo_stack, #self.undo_stack)
 		table.insert(self.stack, redone)
 		if self.layer_panel ~= nil then
 			self.layer_panel = layer_panel.LayerPanel:new(self.stack, self.w - 300, 0, 300)
 		end
+		return true
 	end
+	return false
 end
 
 function Editor:update(dt)
-	if self.save_file_dialog ~= nil then
-		self.save_file_dialog:update(dt)
+	if self.open_dialog ~= nil then
+		self.open_dialog:update(dt)
 	end
 	if self.layer_panel ~= nil then
 		self.layer_panel:update(dt)
@@ -408,10 +430,9 @@ function Editor:draw()
 	love.graphics.setColor(1, 1, 1, 1)
 	if self.layer_panel ~= nil then
 		self.layer_panel:draw()
-		return
 	end
-	if self.save_file_dialog ~= nil then
-		self.save_file_dialog:draw()
+	if self.open_dialog ~= nil then
+		self.open_dialog:draw()
 	end
 end
 

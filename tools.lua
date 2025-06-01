@@ -21,6 +21,8 @@ local toolnames = {
 ---@field y number
 ---@field h number
 ---@field w number
+---@field name string?
+---@field private default_name string
 local Tool = {
 	toolname = toolnames.unknown,
 	color = { r = 0, g = 0, b = 0, a = 1 },
@@ -31,6 +33,8 @@ local Tool = {
 	w = 0,
 	selected = false,
 	building = false,
+	name = nil,
+	default_name = "Tool",
 }
 
 ---@return Tool
@@ -101,6 +105,10 @@ function Tool:draw_selection_box()
 	end
 end
 
+function Tool:get_name()
+	return self.name or self.default_name
+end
+
 -- LINE
 
 ---@class Line: Tool
@@ -119,10 +127,12 @@ function Line:new(linewidth, color)
 		width = linewidth,
 		color = color,
 		points = {},
+		default_name = "Line",
 	}
 
 	setmetatable(l, self)
 	self.__index = self
+
 	return l
 end
 
@@ -221,6 +231,7 @@ function Rectangle:new(linewidth, color)
 		start = nil,
 		end_ = nil,
 		moving = false,
+		default_name = "Rectangle",
 	}
 
 	setmetatable(l, self)
@@ -230,10 +241,7 @@ end
 
 ---@param o table
 function Tool:deserialize(o)
-	local t = {}
-
-	setmetatable(t, self)
-	self.__index = self
+	local t = self:new()
 
 	for key, value in pairs(o) do
 		t[key] = value
@@ -269,6 +277,7 @@ end
 function Rectangle:mousepressed(x, y)
 	self.building = true
 	self.start = { x = x, y = y }
+	self.end_ = { x = x, y = y }
 	return true
 end
 
@@ -343,6 +352,7 @@ function Text:new(linewidth, color)
 		size = 14,
 		blink_ts = 0,
 		blink_on = false,
+		default_name = "Text",
 	}
 
 	setmetatable(l, self)
@@ -443,6 +453,7 @@ function Circle:new(linewidth, color)
 		radiusx = 0,
 		radiusy = 0,
 		equal_sides = false,
+		default_name = "Circle",
 	}
 
 	setmetatable(l, self)
