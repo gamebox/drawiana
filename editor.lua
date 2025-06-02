@@ -7,6 +7,7 @@ local heading = require("designsystem.heading")
 local input = require("designsystem.input")
 local button = require("designsystem.button")
 local layer_panel = require("layer_panel")
+local utils = require("utils")
 
 local M = {}
 
@@ -23,7 +24,7 @@ local Editor = View:new()
 function Editor:debug()
 	print("===", "Editor:debug", "===")
 	print("Controls", self.controls)
-	print("Current Tool", self.current_tool:get_name())
+	print("Current Tool", self.current_tool:get_name(), utils.dump(self.current_tool))
 	print("---", "Stack:", self.stack, "---")
 	for _, tool in ipairs(self.stack) do
 		print("   ", tool:get_name(), tool)
@@ -273,7 +274,6 @@ end
 function Editor:keypressed(combo)
 	if combo == "Shift+Meta+d" then
 		self:debug()
-		return true
 	end
 	if combo == "Meta+s" then
 		self:open_save_dialog()

@@ -22,10 +22,13 @@ You should be able to make art, mockups, etc. quickly and easily with either you
 - [x] Name layers
 - [x] Move layers in the stack
 - [x] Delete layers
-- [ ] Straight line tool
+- [x] Straight line tool
 - [ ] Change background color
 - [ ] Group layers
+- [ ] Rotate / Resize layers
+- [ ] Change opacity for a layer
 - [ ] Layer property editing and viewing
+- [ ] Import custom shape tools
 - [ ] Focus management in design system components
 - [ ] Grid / snap to grid
 - [ ] Multiple documents open
@@ -35,9 +38,7 @@ You should be able to make art, mockups, etc. quickly and easily with either you
 - [ ] Text effects
 - [ ] Shadows
 - [ ] Export to raster image
-- [ ] Rotate / Resize layers
-- [ ] Change opacity for a layer
-- [ ] Import custom shape tools
-- [ ] Lua scripting
+- [ ] Refactor all components to use shortcuts
 - [ ] Command palette
 - [ ] Layer filters
+- [ ] Lua scripting

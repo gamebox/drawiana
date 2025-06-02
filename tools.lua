@@ -7,8 +7,9 @@ local toolnames = {
 	unknown = 0,
 	rectangle = 1,
 	circle = 2,
-	line = 3,
-	text = 4,
+	straight = 3,
+	line = 4,
+	text = 5,
 }
 
 ---@class Tool
@@ -115,23 +116,28 @@ end
 ---@field width number
 ---@field color Color
 ---@field points number[]
+---@field straight boolean
 local Line = Tool:new()
 
 ---@param linewidth number
 ---@param color Color
+---@param straight? boolean
 ---@return Line
-function Line:new(linewidth, color)
+function Line:new(linewidth, color, straight)
 	---@type Line
-	local l = {
+	local l = setmetatable({
 		toolname = toolnames.line,
 		width = linewidth,
 		color = color,
 		points = {},
 		default_name = "Line",
-	}
-
-	setmetatable(l, self)
+		straight = false,
+	}, self)
 	self.__index = self
+
+	if straight ~= nil then
+		l.straight = straight
+	end
 
 	return l
 end
@@ -144,7 +150,11 @@ function Line:mousepressed(x, y)
 end
 
 function Line:mousemoved(x, y)
-	if self.building then
+	if self.straight and self.building then
+		self.points[3] = x
+		self.points[4] = y
+		return true
+	elseif self.building then
 		table.insert(self.points, x)
 		table.insert(self.points, y)
 		return true
@@ -522,7 +532,7 @@ local toolfactory = function(t)
 		elseif toolname == 3 then
 			tool = Line:deserialize(t)
 			tool:set_dimensions()
-		elseif toolname == 4 then
+		elseif toolname == 5 then
 			tool = Text:deserialize(t)
 		else
 			tool = Tool:deserialize(t)

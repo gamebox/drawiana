@@ -1,5 +1,6 @@
 local tools = require("tools")
 local slider = require("designsystem.slider")
+local freehand_points = require("freehand_points")
 local Rectangle = tools.Rectangle
 local Line = tools.Line
 local Text = tools.Text
@@ -220,7 +221,7 @@ local Controls = View:new({
 	orientation = HORIZONTAL,
 	tool = "line",
 	tool_options = {},
-	tools = { "rectangle", "rectangle_outline", "circle", "circle_outline", "line", "text" },
+	tools = { "rectangle", "rectangle_outline", "circle", "circle_outline", "straight", "line", "freehand", "text" },
 	tool_indexes = {},
 	color_options = color_options,
 })
@@ -261,12 +262,15 @@ end
 
 function Controls:setup_tools()
 	local controls = self
-	local h, w = controls.h, controls.w
+
+	-- Create tools
 	local r = Rectangle:new(1, black)
 	r.mode = "fill"
 	local r2 = Rectangle:new(3, black)
 	r2.mode = "line"
+	local straight = Line:new(1, black, true)
 	local l = Line:new(1, black)
+	l:setColor(selected_color)
 	local circle = Circle:new(1, black)
 	circle.mode = "fill"
 	local circle_o = Circle:new(3, black)
@@ -278,8 +282,12 @@ function Controls:setup_tools()
 	table.insert(controls.tool_options, r2)
 	table.insert(controls.tool_options, circle)
 	table.insert(controls.tool_options, circle_o)
+	table.insert(controls.tool_options, straight)
 	table.insert(controls.tool_options, l)
 	table.insert(controls.tool_options, t)
+
+	-- Layout tools
+	local h, w = controls.h, controls.w
 	if h > w then
 		controls.orientation = VERTICAL
 		controls.color_opt_width = 40
@@ -290,7 +298,13 @@ function Controls:setup_tools()
 		r2.start = { x = controls.x, y = controls.y }
 		r2.end_ =
 			{ x = controls.x + (controls.color_opt_width - 2) * 2, y = controls.y + controls.color_opt_height - 2 }
-		l.points = {}
+		straight.points = {
+			controls.x + 8,
+			controls.y + 8,
+			controls.x + controls.color_opt_width - 8,
+			controls.y + controls.color_opt_height - 8,
+		}
+		l.points = freehand_points(controls.x, controls.y + controls.color_opt_height)
 	else
 		local border = 2
 		controls.orientation = HORIZONTAL
@@ -313,13 +327,15 @@ function Controls:setup_tools()
 		circle_o.origin =
 			{ x = xoffset + (controls.color_opt_width / 2), y = controls.y + (controls.color_opt_height / 2) }
 		xoffset = xoffset + controls.color_opt_width
-		l.points = {
+		straight.points = {
 			xoffset + 8,
 			controls.y + 8,
 			xoffset + controls.color_opt_width - 8,
 			controls.y + controls.color_opt_height - 8,
 		}
-		l:setColor(selected_color)
+		xoffset = xoffset + controls.color_opt_width
+		l.points = freehand_points(xoffset + 4, controls.y)
+
 		xoffset = xoffset + controls.color_opt_width
 		t.start = { x = xoffset + border + 12, y = controls.y + border }
 	end
@@ -381,8 +397,45 @@ function Controls:mousepressed(x, y)
 	return false
 end
 
+function Controls:debug()
+	print("===", "Controls:debug", "===")
+	print(
+		"current_color",
+		"r: ",
+		self.current_color.r,
+		"g:",
+		self.current_color.g,
+		"b:",
+		self.current_color.b,
+		"a:",
+		self.current_color.a
+	)
+	print("current_line_width", self.current_line_width)
+	print("color_opt_width", self.color_opt_width)
+	print("color_opt_height", self.color_opt_height)
+	print("orientation", self.orientation)
+	print("tool", self.tool)
+	print("---", "Tools:", self.tools, "---")
+	for _, tool in ipairs(self.tools) do
+		print("   ", tool, tool)
+	end
+	print("---", "Tools END", "---")
+	print("---", "Color Options:", self.color_options, "---")
+	for _, color_option in ipairs(self.tools) do
+		print("   ", color_option, color_option)
+	end
+	print("---", "Color Options END", "---")
+	if self.color_dialog ~= nil then
+		print("color_dialog", self.color_dialog)
+	end
+	print("===", "Controls:debug END", "===")
+end
+
 function Controls:keypressed(combo)
 	local idx = 0
+	if combo == "Shift+Meta+d" then
+		self:debug()
+	end
 
 	if
 		(self.color_dialog ~= nil and self.color_dialog:keypressed(combo)) or self.add_color_button:keypressed(combo)
@@ -577,6 +630,9 @@ function Controls:newtool()
 		local text = Text:new(self.current_line_width, self.current_color)
 		text.size = 24
 		return text
+	end
+	if self.tool == "straight" then
+		return Line:new(self.current_line_width, self.current_color, true)
 	end
 	return Line:new(self.current_line_width, self.current_color)
 end
